@@ -1,7 +1,7 @@
 Windows Registry Editor Version 5.00
 
-[HKEY_CLASSES_ROOT\*\shell\Convertir en fichier Excel]
-@="Convert to Excel File"
+[HKEY_CLASSES_ROOT\*\shell\Convert CSV to Excel File]
+@="Convert CSV to Excel File"
 
-[HKEY_CLASSES_ROOT\*\shell\Convert to Excel File\command]
+[HKEY_CLASSES_ROOT\*\shell\Convert CSV to Excel File\command]
 @="\"C:\\Temp\\CsvToExcelConverter.exe\" \"%1\""
