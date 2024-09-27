@@ -10,7 +10,7 @@ namespace CsvToExcelConverter
 {
     internal class Program
     {
-        // Nombre maximum de lignes par feuille Excel
+        // Maximum number of rows per Excel sheet
         const int MaxRowsPerSheet = 1048576;
 
         static void Main(string[] args)
@@ -19,7 +19,7 @@ namespace CsvToExcelConverter
             {
                 if (args.Length == 0)
                 {
-                    Console.WriteLine("Aucun fichier spécifié.");
+                    Console.WriteLine("No file specified.");
                     Quit();
                     return;
                 }
@@ -27,42 +27,42 @@ namespace CsvToExcelConverter
                 string csvFilePath = args[0];
                 string excelFilePath = Path.ChangeExtension(csvFilePath, ".xlsx");
 
-                // Vérifier si le fichier Excel existe et générer un nouveau nom si nécessaire
+                // Check if the Excel file exists and generate a new name if necessary
                 excelFilePath = GetUniqueFilePath(excelFilePath);
 
-                // Compter le nombre total de lignes dans le fichier CSV
+                // Count the total number of lines in the CSV file
                 int totalLines = CountLinesInCsv(csvFilePath);
 
-                // Vérifier si le nombre de lignes dépasse la limite
+                // Check if the number of lines exceeds the limit
                 if (totalLines > MaxRowsPerSheet)
                 {
-                    Console.WriteLine($"Erreur : Le fichier CSV contient plus de {MaxRowsPerSheet} lignes. Limite dépassée.");
+                    Console.WriteLine($"Error: CSV file contains more than {MaxRowsPerSheet} rows. Limit exceeded.");
                     Quit();
                     return;
                 }
 
-                // Demande à l'utilisateur s'il souhaite créer un tableau
-                Console.Write("Voulez-vous créer un tableau dans Excel ? (o/n) : ");
-                bool createTable = Console.ReadLine().Trim().ToLower() == "o";
+                // Ask the user if they want to create a table
+                Console.Write("Do you want to create a table in Excel? (y/n): ");
+                bool createTable = Console.ReadLine().Trim().ToLower() == "y";
 
-                // Déterminer le nombre total d'étapes
+                // Determine the total number of steps
                 int stepCount = createTable ? 3 : 2;
 
                 bool hasHeaders = false;
                 if (createTable)
                 {
-                    // Afficher la première ligne du CSV pour aider à déterminer si ce sont des en-têtes
+                    // Display the first line of the CSV to help determine if they are headers
                     string firstLine = GetFirstLineOfCsv(csvFilePath);
-                    Console.WriteLine("\nPremière ligne du CSV :\n");
+                    Console.WriteLine("\nFirst line of CSV:\n");
                     Console.WriteLine(firstLine);
-                    Console.WriteLine(); // Ligne vide en bas
+                    Console.WriteLine(); // Empty line at the bottom
 
-                    // Demande si le fichier CSV contient des en-têtes
-                    Console.Write("Votre fichier CSV contient-il des en-têtes ? (o/n) : ");
-                    hasHeaders = Console.ReadLine().Trim().ToLower() == "o";
+                    // Ask if the CSV file contains headers
+                    Console.Write("Does your CSV file contain headers? (y/n): ");
+                    hasHeaders = Console.ReadLine().Trim().ToLower() == "y";
                 }
 
-                Console.WriteLine($"Nombre total de lignes à traiter : {totalLines}");
+                Console.WriteLine($"Total number of lines to be processed: {totalLines}");
 
                 using (var workbook = new XLWorkbook())
                 {
@@ -70,16 +70,16 @@ namespace CsvToExcelConverter
                     int currentRow = 1;
                     int processedLines = 0;
 
-                    Console.WriteLine($"\nÉtape 1/{stepCount} : Lecture des données...");
+                    Console.WriteLine($"\nStep 1/{stepCount}: Reading data...");
 
                     using (TextFieldParser parser = new TextFieldParser(csvFilePath, Encoding.Default))
                     {
-                        // Détecter automatiquement le séparateur
+                        // Automatically detect the separator
                         parser.TextFieldType = FieldType.Delimited;
                         parser.SetDelimiters(DetectSeparator(File.ReadAllLines(csvFilePath, Encoding.Default)[0]).ToString());
-                        parser.HasFieldsEnclosedInQuotes = true; // Gérer les valeurs entre guillemets
+                        parser.HasFieldsEnclosedInQuotes = true; // Handle values enclosed in quotes
 
-                        // Gérer les en-têtes
+                        // Handle headers
                         if (hasHeaders && !parser.EndOfData)
                         {
                             var headers = parser.ReadFields();
@@ -87,77 +87,77 @@ namespace CsvToExcelConverter
                             {
                                 worksheet.Cell(currentRow, j + 1).Value = headers[j];
                             }
-                            currentRow++; // Passer à la ligne suivante après les en-têtes
+                            currentRow++; // Move to the next line after headers
                         }
 
-                        // Lire et traiter les lignes une par une
+                        // Read and process lines one by one
                         while (!parser.EndOfData && currentRow <= MaxRowsPerSheet)
                         {
                             var values = parser.ReadFields();
 
-                            // Vérifier s'il y a des données valides sur la ligne
+                            // Check if there is valid data on the line
                             if (values == null || values.Length == 0 || values.All(string.IsNullOrWhiteSpace))
                             {
-                                continue; // Ignorer les lignes vides
+                                continue; // Skip empty lines
                             }
 
                             for (int j = 0; j < values.Length; j++)
                             {
                                 var cell = worksheet.Cell(currentRow, j + 1);
 
-                                // Tenter de détecter et de convertir les types
+                                // Try to detect and convert types
                                 if (int.TryParse(values[j], out int intValue))
                                 {
-                                    cell.Value = intValue; // Stocker en tant qu'entier
+                                    cell.Value = intValue; // Store as integer
                                 }
                                 else if (double.TryParse(values[j], NumberStyles.Any, CultureInfo.InvariantCulture, out double doubleValue))
                                 {
-                                    cell.Value = doubleValue; // Stocker en tant que nombre à virgule flottante
+                                    cell.Value = doubleValue; // Store as floating-point number
                                 }
                                 else if (DateTime.TryParse(values[j], out DateTime dateValue))
                                 {
-                                    cell.Value = dateValue; // Stocker en tant que date
+                                    cell.Value = dateValue; // Store as date
                                 }
                                 else
                                 {
-                                    cell.Value = values[j]; // Stocker en tant que texte
+                                    cell.Value = values[j]; // Store as text
                                 }
                             }
 
-                            currentRow++; // Passer à la ligne suivante
+                            currentRow++; // Move to the next line
                             processedLines++;
 
-                            // Mise à jour de la barre de progression
+                            // Update the progress bar
                             if (processedLines % 1000 == 0 || processedLines == totalLines)
                             {
-                                Console.Write($"\rProgression : Lecture des données : {processedLines * 100 / totalLines}%");
+                                Console.Write($"\rProgress: Reading data: {processedLines * 100 / totalLines}%");
                             }
                         }
                     }
 
-                    // Si l'utilisateur souhaite créer un tableau
+                    // If the user wants to create a table
                     if (createTable)
                     {
-                        Console.WriteLine($"\n\nÉtape 2/{stepCount} : Création du tableau...");
+                        Console.WriteLine($"\n\nStep 2/{stepCount}: Table creation...");
                         var range = worksheet.RangeUsed();
                         range.CreateTable();
                     }
 
-                    Console.WriteLine($"\n\nÉtape {stepCount}/{stepCount} : Sauvegarde du fichier...");
+                    Console.WriteLine($"\n\nStep {stepCount}/{stepCount}: Saving the file...");
                     workbook.SaveAs(excelFilePath);
                 }
 
                 System.Diagnostics.Process.Start(excelFilePath);
-                Console.WriteLine("\nConversion terminée.");
+                Console.WriteLine("\nConversion complete.");
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Erreur lors de la conversion : " + ex.Message);
+                Console.WriteLine("Conversion error: " + ex.Message);
                 Quit();
             }
         }
 
-        // Méthode pour récupérer un chemin de fichier unique
+        // Method to get a unique file path
         static string GetUniqueFilePath(string filePath)
         {
             int count = 1;
@@ -166,7 +166,7 @@ namespace CsvToExcelConverter
             string path = Path.GetDirectoryName(filePath);
             string newFullPath = filePath;
 
-            // Ajouter un suffixe tant qu'un fichier du même nom existe
+            // Add a suffix as long as a file with the same name exists
             while (File.Exists(newFullPath))
             {
                 string tempFileName = $"{fileNameOnly}_{count++}";
@@ -176,7 +176,7 @@ namespace CsvToExcelConverter
             return newFullPath;
         }
 
-        // Méthode pour récupérer la première ligne du fichier CSV
+        // Method to get the first line of the CSV file
         static string GetFirstLineOfCsv(string filePath)
         {
             using (var reader = new StreamReader(filePath, Encoding.Default))
@@ -185,7 +185,7 @@ namespace CsvToExcelConverter
             }
         }
 
-        // Méthode pour compter les lignes dans le fichier CSV
+        // Method to count the lines in the CSV file
         static int CountLinesInCsv(string filePath)
         {
             int lineCount = 0;
@@ -199,17 +199,17 @@ namespace CsvToExcelConverter
             return lineCount;
         }
 
-        // Méthode pour détecter le séparateur le plus probable
+        // Method to detect the most likely separator
         static char DetectSeparator(string line)
         {
             char[] possibleSeparators = { ',', ';', '\t', '|' };
             return possibleSeparators.OrderByDescending(sep => line.Count(c => c == sep)).First();
         }
 
-        // Méthode pour quitter l'application
+        // Method to quit the application
         static void Quit()
         {
-            Console.WriteLine("Appuyer sur une touche pour quitter...");
+            Console.WriteLine("Press a key to exit...");
             Console.ReadKey();
         }
     }
